@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema Malba Tahan - Biblioteca Escolar</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
@@ -267,15 +265,6 @@
 
         .btn-danger:hover {
             box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
-        }
-
-        .btn-warning {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
-        }
-
-        .btn-warning:hover {
-            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
         }
 
         .btn-small {
@@ -1021,6 +1010,20 @@
             background-clip: text;
         }
 
+        /* Indicador de Performance */
+        #performanceIndicator {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: #10b981;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 10000;
+            font-weight: bold;
+        }
+
         @media print {
             body {
                 background: white;
@@ -1097,6 +1100,7 @@
                     <button class="menu-dropdown-btn">⋮</button>
                     <div class="menu-dropdown-content">
                         <a href="#" onclick="showSection('suporte')">🛠️ Suporte</a>
+                        <a href="#" onclick="alternarModoPerformance()">⚡ Modo Performance</a>
                         <a href="#" onclick="abrirModalLimpeza()">🗑️ Limpar Dados</a>
                     </div>
                 </div>
@@ -1238,7 +1242,7 @@
         <section id="ranking" class="section">
             <h2>🏆 Ranking</h2>
             <div class="filter-bar">
-                <select id="tipoRanking" class="select-field" onchange="mudarTipoRanking()">
+                <select id="tipoRanking" class="select-field" onchange="atualizarRanking()">
                     <option value="alunos">Alunos Mais Leitores</option>
                     <option value="livros">Livros Mais Emprestados</option>
                 </select>
@@ -1259,7 +1263,7 @@
         <section id="relatorios" class="section">
             <h2>📊 Relatórios</h2>
             <div class="filter-bar">
-                <select id="tipoRelatorio" class="select-field" onchange="mudarTipoRelatorio()">
+                <select id="tipoRelatorio" class="select-field" onchange="atualizarFiltrosRelatorio()">
                     <option value="emprestimos">Empréstimos por Período</option>
                     <option value="alunos">Alunos mais Ativos</option>
                     <option value="livros">Livros mais Emprestados</option>
@@ -1351,7 +1355,10 @@
     </div>
 
     <script>
-        // Variáveis globais
+        // =============================================
+        // VARIÁVEIS GLOBAIS E CONFIGURAÇÕES
+        // =============================================
+
         let alunos = [];
         let emprestimos = [];
         let livros = [];
@@ -1359,6 +1366,8 @@
         let editandoAlunoId = null;
         let editandoLivroId = null;
         let turnoAtual = '';
+        let performanceMode = false;
+        let performanceCache = new Map();
 
         // Definição das turmas por turno
         const turmasManha = {
@@ -1375,7 +1384,166 @@
             '9º Ano': ['1904', '1905', '1906']
         };
 
-        // Inicialização do sistema
+        // =============================================
+        // MODO DE PERFORMANCE
+        // =============================================
+
+        function alternarModoPerformance() {
+            performanceMode = !performanceMode;
+
+            if (performanceMode) {
+                ativarModoPerformance();
+                showAlert('mainAlert', '⚡ Modo Performance Ativado - Otimizando para dispositivos lentos', 'success');
+            } else {
+                desativarModoPerformance();
+                showAlert('mainAlert', '⚡ Modo Performance Desativado - Recursos completos restaurados', 'success');
+            }
+
+            // Salvar preferência
+            localStorage.setItem('performanceModeBiblioteca', performanceMode);
+        }
+
+        function ativarModoPerformance() {
+            console.log('🚀 Ativando modo performance...');
+
+            // 1. Desativar animações pesadas
+            desativarAnimacoesPesadas();
+
+            // 2. Otimizar processamento de dados
+            otimizarProcessamentoDados();
+
+            // 3. Configurar cache agressivo
+            configurarCacheAgressivo();
+
+            // 4. Reduzir qualidade visual
+            reduzirQualidadeVisual();
+
+            // 5. Indicador visual
+            mostrarIndicadorPerformance();
+        }
+
+        function desativarModoPerformance() {
+            console.log('🔙 Restaurando modo normal...');
+
+            // Restaurar animações
+            restaurarAnimacoes();
+
+            // Limpar cache
+            performanceCache.clear();
+
+            // Restaurar qualidade visual
+            restaurarQualidadeVisual();
+
+            // Remover indicador
+            removerIndicadorPerformance();
+        }
+
+        function desativarAnimacoesPesadas() {
+            const style = document.createElement('style');
+            style.id = 'performance-styles';
+            style.textContent = `
+                body::before, body::after {
+                    animation: none !important;
+                }
+                .card:hover {
+                    transform: none !important;
+                }
+                .ranking-item:hover {
+                    transform: none !important;
+                }
+                .btn:hover {
+                    transform: none !important;
+                }
+                .menu-btn:hover {
+                    transform: none !important;
+                }
+                .turno-btn:hover {
+                    transform: none !important;
+                }
+                * {
+                    transition-duration: 0.1s !important;
+                    animation-duration: 0.1s !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function restaurarAnimacoes() {
+            const performanceStyles = document.getElementById('performance-styles');
+            if (performanceStyles) {
+                performanceStyles.remove();
+            }
+        }
+
+        function otimizarProcessamentoDados() {
+            // Debounce mais agressivo para modo performance
+            window.performanceDebounce = function(func, delay) {
+                let timeoutId;
+                return function(...args) {
+                    clearTimeout(timeoutId);
+                    timeoutId = setTimeout(() => func.apply(this, args), delay * 2);
+                };
+            };
+        }
+
+        function configurarCacheAgressivo() {
+            // Cache para resultados de busca
+            const originalFilterAlunos = window.filtrarAlunos;
+            window.filtrarAlunos = function() {
+                if (!performanceMode) {
+                    return originalFilterAlunos();
+                }
+
+                const termo = document.getElementById('buscaAlunoGestao').value.toLowerCase().trim();
+                const turma = document.getElementById('filtroTurma').value;
+                const cacheKey = `alunos_${termo}_${turma}`;
+
+                if (performanceCache.has(cacheKey)) {
+                    document.getElementById('listaAlunos').innerHTML = performanceCache.get(cacheKey);
+                    return;
+                }
+
+                const result = originalFilterAlunos();
+                performanceCache.set(cacheKey, document.getElementById('listaAlunos').innerHTML);
+            };
+        }
+
+        function reduzirQualidadeVisual() {
+            // Simplificar elementos visuais
+            document.body.style.backdropFilter = 'none';
+            document.querySelectorAll('.card, .section, .header').forEach(el => {
+                el.style.backdropFilter = 'none';
+            });
+        }
+
+        function restaurarQualidadeVisual() {
+            document.body.style.backdropFilter = '';
+            document.querySelectorAll('.card, .section, .header').forEach(el => {
+                el.style.backdropFilter = '';
+            });
+        }
+
+        function mostrarIndicadorPerformance() {
+            let indicator = document.getElementById('performanceIndicator');
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'performanceIndicator';
+                indicator.innerHTML = '⚡ Modo Performance';
+                document.body.appendChild(indicator);
+            }
+        }
+
+        function removerIndicadorPerformance() {
+            const indicator = document.getElementById('performanceIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        // =============================================
+        // INICIALIZAÇÃO DO SISTEMA
+        // =============================================
+
         document.addEventListener('DOMContentLoaded', function() {
             // Carregar dados do localStorage
             carregarDados();
@@ -1393,9 +1561,22 @@
             // Configurar data atual para relatórios
             const hoje = new Date();
             document.getElementById('mesRelatorio').value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+
+            // Inicializar modo performance se configurado
+            const savedPerformanceMode = localStorage.getItem('performanceModeBiblioteca');
+            if (savedPerformanceMode === 'true') {
+                performanceMode = true;
+                ativarModoPerformance();
+            }
+
+            // Inicializar filtros de relatório
+            atualizarFiltrosRelatorio();
         });
 
-        // Funções de persistência de dados
+        // =============================================
+        // FUNÇÕES DE PERSISTÊNCIA DE DADOS
+        // =============================================
+
         function carregarDados() {
             try {
                 const dadosAlunos = localStorage.getItem('alunosBiblioteca');
@@ -1438,7 +1619,10 @@
             }
         }
 
-        // Sistema de turnos
+        // =============================================
+        // SISTEMA DE TURNOS
+        // =============================================
+
         function selecionarTurno(turno) {
             turnoAtual = turno;
             localStorage.setItem('turnoBiblioteca', turno);
@@ -1466,19 +1650,23 @@
             showSection('dashboard');
 
             // Configurar eventos de busca
-            document.getElementById('buscaAluno').addEventListener('input', debounce(buscarAluno, 300));
-            document.getElementById('buscaDevolucao').addEventListener('input', debounce(listarDevolucoes, 300));
-            document.getElementById('buscaAlunoGestao').addEventListener('input', debounce(filtrarAlunos, 300));
-            document.getElementById('buscaLivroGestao').addEventListener('input', debounce(filtrarLivros, 300));
-            document.getElementById('buscaSituacaoAluno').addEventListener('input', debounce(filtrarSituacao, 300));
-            document.getElementById('buscaSituacaoLivro').addEventListener('input', debounce(filtrarSituacao, 300));
-            document.getElementById('buscaDevedor').addEventListener('input', debounce(listarDevedores, 300));
+            const debounceDelay = performanceMode ? 600 : 300;
+            document.getElementById('buscaAluno').addEventListener('input', debounce(buscarAluno, debounceDelay));
+            document.getElementById('buscaDevolucao').addEventListener('input', debounce(listarDevolucoes, debounceDelay));
+            document.getElementById('buscaAlunoGestao').addEventListener('input', debounce(filtrarAlunos, debounceDelay));
+            document.getElementById('buscaLivroGestao').addEventListener('input', debounce(filtrarLivros, debounceDelay));
+            document.getElementById('buscaSituacaoAluno').addEventListener('input', debounce(filtrarSituacao, debounceDelay));
+            document.getElementById('buscaSituacaoLivro').addEventListener('input', debounce(filtrarSituacao, debounceDelay));
+            document.getElementById('buscaDevedor').addEventListener('input', debounce(listarDevedores, debounceDelay));
 
             // Verificar prazos vencidos
             verificarPrazosVencidos();
         }
 
-        // Utilitários
+        // =============================================
+        // UTILITÁRIOS
+        // =============================================
+
         function debounce(func, delay) {
             let timeoutId;
             return function(...args) {
@@ -1505,9 +1693,11 @@
 
             if (sectionId === 'dashboard') {
                 atualizarDashboard();
+                document.getElementById('dashboard').style.display = 'grid';
                 return;
             }
 
+            document.getElementById('dashboard').style.display = 'none';
             document.getElementById(sectionId).classList.add('active');
 
             if (sectionId === 'devolucoes') listarDevolucoes();
@@ -1518,7 +1708,10 @@
             if (sectionId === 'ranking') atualizarRanking();
         }
 
-        // Dashboard
+        // =============================================
+        // DASHBOARD
+        // =============================================
+
         function atualizarDashboard() {
             // Filtrar dados apenas do turno atual
             const emprestimosTurno = emprestimos.filter(e => e.turno === turnoAtual);
@@ -1553,7 +1746,10 @@
             }
         }
 
-        // Sistema de alertas de prazo
+        // =============================================
+        // SISTEMA DE ALERTAS DE PRAZO
+        // =============================================
+
         function verificarPrazosVencidos() {
             const emprestimosTurno = emprestimos.filter(e => e.turno === turnoAtual && e.ativo);
             const hoje = new Date();
@@ -1574,7 +1770,10 @@
             }
         }
 
-        // Gestão de empréstimos
+        // =============================================
+        // GESTÃO DE EMPRÉSTIMOS
+        // =============================================
+
         function buscarAluno() {
             const termo = document.getElementById('buscaAluno').value.toLowerCase().trim();
             const resultados = document.getElementById('resultadosAluno');
@@ -1717,7 +1916,10 @@
             document.getElementById('emprestimoSelecionado').style.display = 'none';
         }
 
-        // Gestão de devoluções
+        // =============================================
+        // GESTÃO DE DEVOLUÇÕES
+        // =============================================
+
         function listarDevolucoes() {
             const termo = document.getElementById('buscaDevolucao').value.toLowerCase().trim();
             const ativos = emprestimos.filter(e => e.ativo && e.turno === turnoAtual);
@@ -1789,7 +1991,10 @@
             atualizarDashboard();
         }
 
-        // Gestão de alunos
+        // =============================================
+        // GESTÃO DE ALUNOS
+        // =============================================
+
         function abrirModalAluno(id = null) {
             editandoAlunoId = id;
 
@@ -1981,7 +2186,10 @@
             atualizarDashboard();
         }
 
-        // Gestão de livros
+        // =============================================
+        // GESTÃO DE LIVROS
+        // =============================================
+
         function abrirModalLivro(id = null) {
             editandoLivroId = id;
 
@@ -2122,7 +2330,10 @@
             atualizarDashboard();
         }
 
-        // Situação
+        // =============================================
+        // SITUAÇÃO
+        // =============================================
+
         function filtrarSituacao() {
             const termoAluno = document.getElementById('buscaSituacaoAluno').value.toLowerCase().trim();
             const termoLivro = document.getElementById('buscaSituacaoLivro').value.trim();
@@ -2271,7 +2482,10 @@
                 '<p style="color: #94a3b8; text-align: center; grid-column: 1 / -1; padding: 20px;">Nenhum aluno cadastrado ainda.</p>';
         }
 
-        // Devedores
+        // =============================================
+        // DEVEDORES
+        // =============================================
+
         function listarDevedores() {
             const termo = document.getElementById('buscaDevedor').value.toLowerCase().trim();
             const hoje = new Date();
@@ -2333,10 +2547,9 @@
             document.getElementById('listaDevedores').innerHTML = lista.length > 0 ? html : '<p style="color: #94a3b8;">Nenhum empréstimo em atraso encontrado.</p>';
         }
 
-        // Ranking
-        function mudarTipoRanking() {
-            atualizarRanking();
-        }
+        // =============================================
+        // RANKING
+        // =============================================
 
         function atualizarRanking() {
             const tipo = document.getElementById('tipoRanking').value;
@@ -2438,8 +2651,11 @@
             document.getElementById('listaRanking').innerHTML = html || '<p style="color: #94a3b8;">Nenhum dado encontrado no período selecionado.</p>';
         }
 
-        // Relatórios
-        function mudarTipoRelatorio() {
+        // =============================================
+        // RELATÓRIOS
+        // =============================================
+
+        function atualizarFiltrosRelatorio() {
             const tipo = document.getElementById('tipoRelatorio').value;
             const mesInput = document.getElementById('mesRelatorio');
 
@@ -2807,7 +3023,10 @@
             return html;
         }
 
-        // Exportação para CSV
+        // =============================================
+        // EXPORTAÇÃO PARA CSV
+        // =============================================
+
         function exportarRelatorioCSV() {
             const tipo = document.getElementById('tipoRelatorio').value;
             const mes = document.getElementById('mesRelatorio').value;
@@ -2926,7 +3145,10 @@
             showAlert('mainAlert', 'Relatório exportado em CSV com sucesso! 📄', 'success');
         }
 
-        // Limpeza de dados
+        // =============================================
+        // LIMPEZA DE DADOS
+        // =============================================
+
         function abrirModalLimpeza() {
             document.getElementById('modalLimpeza').classList.add('active');
         }
@@ -2961,9 +3183,6 @@
                 window.location.reload();
             }, 3000);
         }
-
-        // Inicializar mudança de tipo de relatório
-        mudarTipoRelatorio();
     </script>
 </body>
 </html>
